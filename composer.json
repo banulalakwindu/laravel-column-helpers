@@ -1,0 +1,40 @@
+{
+  "name": "banulalakwindu/laravel-column-helpers",
+  "description": "Laravel traits and migration macros for common model columns.",
+  "type": "library",
+  "license": "MIT",
+  "version": "1.0.0",
+  "keywords": [
+    "laravel",
+    "traits",
+    "macros",
+    "columns",
+    "migrations"
+  ],
+  "authors": [
+    {
+      "name": "Banula Lakwindu",
+      "email": "banulalakwindu10@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "BanulaLakwindu\\ColumnHelpers\\": "src/"
+    }
+  },
+  "require": {
+    "php": "^8.0",
+    "illuminate/support": "^10.0|^11.0|^12.0",
+    "illuminate/database": "^10.0|^11.0|^12.0",
+    "spatie/laravel-sluggable": "^3.0"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "BanulaLakwindu\\ColumnHelpers\\ColumnHelpersServiceProvider"
+      ]
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
