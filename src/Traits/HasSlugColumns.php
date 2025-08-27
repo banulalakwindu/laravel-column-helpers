@@ -18,6 +18,15 @@ trait HasSlugColumns
         $this->mergeFillable([$mainColumn, 'slug']);
     }
 
+    /**
+     * Get the source column name for slug generation.
+     *
+     * Override this method in your model to specify a custom source column.
+     * If not overridden, it will try to read from the slugColumns('#') in migration,
+     * or fall back to 'name' as default.
+     *
+     * @return string The column name to generate slugs from
+     */
     protected function getSlugSourceColumn(): string
     {
         return $this->slugSourceColumn();
@@ -48,50 +57,73 @@ trait HasSlugColumns
         return 'name';
     }
 
+    /**
+     * Get the cache duration for slug column comment caching.
+     * Override this method in your model to customize cache duration.
+     *
+     * @return int Cache duration in seconds
+     */
+    protected function getSlugColumnCommentCacheDuration(): int
+    {
+        return 7 * 24 * 60 * 60; // 7 days in seconds
+    }
+
     protected function getSlugColumnComment(): ?string
     {
         $table = $this->getTable();
+        $cacheKey = "table_{$table}_slug_comment";
+        $cacheDuration = $this->getSlugColumnCommentCacheDuration();
 
-        try {
-            $connection = $this->getConnection();
+        /** @var string|null $result */
+        $result = Cache::remember($cacheKey, $cacheDuration, function () use ($table): ?string {
+            try {
+                $connection = $this->getConnection();
 
-            /** @var array<int, object> $columns */
-            $columns = $connection->select("
-            SELECT COLUMN_COMMENT 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = ? 
-            AND TABLE_NAME = ? 
-            AND COLUMN_NAME = 'slug'
-        ", [$connection->getDatabaseName(), $table]);
+                /** @var array<int, object> $columns */
+                $columns = $connection->select("
+                SELECT COLUMN_COMMENT 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = ? 
+                AND TABLE_NAME = ? 
+                AND COLUMN_NAME = 'slug'
+            ", [$connection->getDatabaseName(), $table]);
 
-            if (empty($columns)) {
+                if (empty($columns)) {
+                    return null;
+                }
+
+                /** @var object $firstColumn */
+                $firstColumn = $columns[0];
+
+                $comment = $firstColumn->COLUMN_COMMENT ?? null;
+
+                return is_string($comment) ? $comment : null;
+            } catch (Exception) {
                 return null;
             }
+        });
 
-            /** @var object $firstColumn */
-            $firstColumn = $columns[0];
-
-            $comment = $firstColumn->COLUMN_COMMENT ?? null;
-
-            return is_string($comment) ? $comment : null;
-        } catch (Exception) {
-            return null;
-        }
+        return $result; // already string|null, no cast needed
     }
 
     public function getSlugOptions(): SlugOptions
     {
         $mainColumn = $this->getSlugSourceColumn();
 
-        return SlugOptions::create()
+        $slugOptions = SlugOptions::create()
             ->generateSlugsFrom($mainColumn)
             ->saveSlugsTo('slug')
-            ->doNotGenerateSlugsOnUpdate()
-            ->extraScope(
+            ->doNotGenerateSlugsOnUpdate();
+
+        if (method_exists($this, 'getDeletedAtColumn')) {
+            $slugOptions->extraScope(
                 function (Builder $builder): void {
                     $builder->whereNull($this->getDeletedAtColumn());
                 }
             );
+        }
+
+        return $slugOptions;
     }
 
     public function getRouteKeyName(): string

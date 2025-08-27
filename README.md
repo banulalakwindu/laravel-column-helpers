@@ -36,6 +36,7 @@ Schema::table('posts', function (Blueprint $table) {
 #### Slug Columns
 ```php
 Schema::table('posts', function (Blueprint $table) {
+    $table->slugColumns(); // Adds name and slug columns
     $table->slugColumns('title'); // Adds title and slug columns
 });
 ```
@@ -56,13 +57,6 @@ use BanulaLakwindu\ColumnHelpers\Traits\HasActiveColumn;
 class Post extends Model
 {
     use HasActiveColumn;
-
-    protected static function booted()
-    {
-        static::addGlobalScope('active', function ($query) {
-            $query->active();
-        });
-    }
 }
 
 // Usage
@@ -108,10 +102,21 @@ class Post extends Model
 
     protected function slugSourceColumn(): string
     {
-        return 'title'; // Override to use different source column
+        return 'title';
+    }
+
+    protected function getSlugColumnCommentCacheDuration(): int
+    {
+        return 7 * 24 * 60 * 60; // 7 days in seconds
     }
 }
 ```
+
+**Override Functions:**
+
+- `slugSourceColumn()`: **Required override** - Specifies which column to use as the source for generating slugs. If not overridden, the trait will auto-detect the slug source column from database comments every time (caching is needed).
+
+- `getSlugColumnCommentCacheDuration()`: **Optional override** - Sets cache duration for slug source column detection. Default is 7 days. Only used when `slugSourceColumn()` is not overridden.
 
 #### HasSortOrderColumn
 ```php
