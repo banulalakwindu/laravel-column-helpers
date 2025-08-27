@@ -3,7 +3,7 @@
   "description": "Laravel traits and migration macros for common model columns.",
   "type": "library",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "keywords": [
     "laravel",
     "traits",
